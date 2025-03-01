@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translating Silence</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <!-- Font Awesome for Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background: linear-gradient(to right, rgba(106, 17, 203, 0.8), rgba(37, 117, 252, 0.8));
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 36px;
+            color: #ffffff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        /* Result Box */
+        #result {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            padding: 15px;
+            width: 80%;
+            max-width: 500px;
+            margin: 10px 0;
+            border-radius: 10px;
+            background-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Word Box */
+        #wordBox {
+            font-size: 18px;
+            color: #000;
+            padding: 15px;
+            margin-top: 15px;
+            width: 80%;
+            max-width: 500px;
+            border: none;
+            border-radius: 10px;
+            outline: none;
+            resize: none;
+            background-color: #ffffff;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Camera Feed */
+        img {
+            width: 80%;
+            max-width: 500px;
+            height: auto;
+            border-radius: 15px;
+            margin: 15px 0;
+            box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Buttons */
+        .btn {
+            font-size: 18px;
+            padding: 10px 20px;
+            margin: 10px;
+            border: none;
+            border-radius: 25px;
+            background: #2575fc;
+            color: #ffffff;
+            cursor: pointer;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: #6a11cb;
+            transform: translateY(-2px);
+            box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 28px;
+            }
+
+            img {
+                width: 90%;
+            }
+
+            #result {
+                font-size: 18px;
+                padding: 10px;
+            }
+
+            .btn {
+                font-size: 16px;
+                padding: 8px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Translating Silence</h1>
+    
+    <!-- Camera Feed -->
+    <img id="camera-feed" src="{{ url_for('video_feed') }}" alt="Live Feed" />
+    
+    <!-- Result Section -->
+    <div id="result">Waiting for gesture...</div>
+    
+    <!-- Word Box -->
+    <textarea id="wordBox" readonly placeholder="Word will appear here..."></textarea>
+    
+    <!-- Buttons Section -->
+    <div>
+        <button class="btn" onclick="toggleCamera()">
+            <i class="fas fa-video"></i> Camera
+        </button>
+        <button class="btn" onclick="speakText()">
+            <i class="fas fa-microphone"></i> Speak
+        </button>
+        <button class="btn" onclick="clearWordBox()">
+            <i class="fas fa-trash-alt"></i> Clear
+        </button>
+    </div>
+    
+    <script>
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+    
+        // Initialize variables
+        var currentWord = ''; // Holds the current word
+        var sentence = ''; // Holds the entire sentence
+        var lastUpdatedTime = 0; // Tracks the last time a letter was added
+        var cameraVisible = false; // Camera is off by default
+    
+        // Hide the camera feed initially
+        window.onload = function() {
+            var camera = document.getElementById('camera-feed');
+            camera.style.display = 'none';
+            console.log('Camera is off by default');
+        };
+    
+        // Listen for gesture result from the server
+        socket.on('gesture_result', function(data) {
+            var gesture = data.gesture;
+            var currentTime = new Date().getTime(); // Get the current time in milliseconds
+            document.getElementById('result').innerText = 'Alphabet is: ' + gesture;
+    
+            // Handle gesture recognition
+            if (gesture !== 'RESET' && gesture !== 'Unknown') {
+                if (currentTime - lastUpdatedTime >= 5000 && currentWord !== '') {
+                    sentence += currentWord + ' ';
+                    currentWord = ''; // Reset the current word
+                }
+                currentWord += gesture;
+                lastUpdatedTime = currentTime; // Update the last updated time
+            }
+    
+            if (gesture === 'RESET') {
+                currentWord = '';
+                sentence = '';
+            }
+    
+            document.getElementById('wordBox').value = sentence + currentWord;
+        });
+    
+        // Toggle camera feed visibility
+        function toggleCamera() {
+            var camera = document.getElementById('camera-feed');
+            cameraVisible = !cameraVisible;
+            camera.style.display = cameraVisible ? 'block' : 'none';
+            console.log('Camera toggled: ' + (cameraVisible ? 'On' : 'Off'));
+        }
+    
+        // Speak the text
+        function speakText() {
+            var textToSpeak = document.getElementById('wordBox').value;
+            if ('speechSynthesis' in window) {
+                var utterance = new SpeechSynthesisUtterance(textToSpeak);
+                utterance.onstart = function() { console.log("Speaking: " + textToSpeak); };
+                utterance.onerror = function(event) { console.error("Speech synthesis error: ", event); };
+                window.speechSynthesis.speak(utterance);
+            } else {
+                console.error("Speech synthesis is not supported in this browser.");
+            }
+        }
+    
+        // Clear the word box
+        function clearWordBox() {
+            document.getElementById('wordBox').value = '';
+            document.getElementById('result').innerText = 'Waiting for gesture...';
+            currentWord = '';
+            sentence = '';
+            console.log('Word box cleared.');
+        }
+    </script>
+    
+</body>
+</html>
