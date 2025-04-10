@@ -62,7 +62,7 @@ Contributions are welcome! Here's how you can help:
   <tr>
     <td align="center">
       <a href="https://github.com/HARAJIT05">
-        <img src="https://avatars.githubusercontent.com/u/115410171?v=4" width="100px;" alt="Harajit Das"/><br />
+        <img src="https://avatars.githubusercontent.com/u/110291590?v=4" width="100px;" alt="Harajit Das"/><br />
         <sub><b>HARAJIT05</b></sub>
       </a>
     </td>
