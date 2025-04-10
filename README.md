@@ -5,7 +5,7 @@ Translating-Silence is a computer vision-powered system designed to translate Am
 ## 🚀 Features
 
 - 🎥 Real-time sign language detection using a webcam
-- 🧠 ASL gesture recognition using machine learning
+- 🧠 ISL gesture recognition using machine learning
 - 🖥️ Live text output of detected gestures
 - 🔧 Easy to modify and expand for more gestures/languages
 
@@ -62,7 +62,7 @@ Contributions are welcome! Here's how you can help:
   <tr>
     <td align="center">
       <a href="https://github.com/HARAJIT05">
-        <img src="https://avatars.githubusercontent.com/u/115410171?v=4" width="100px;" alt="Harajit Pradhan"/><br />
+        <img src="https://avatars.githubusercontent.com/u/115410171?v=4" width="100px;" alt="Harajit Das"/><br />
         <sub><b>HARAJIT05</b></sub>
       </a>
     </td>
