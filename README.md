@@ -63,7 +63,25 @@ Contributions are welcome! Here's how you can help:
     <td align="center">
       <a href="https://github.com/HARAJIT05">
         <img src="https://avatars.githubusercontent.com/u/110291590?v=4" width="100px;" alt="Harajit Das"/><br />
-        <sub><b>HARAJIT05</b></sub>
+        <sub><b>Harajit Das</b></sub>
+      </a>
+    </td>
+        <td align="center">
+      <a href="https://github.com/Senapati5">
+        <img src="https://avatars.githubusercontent.com/u/158562332?v=4" width="100px;" alt="Arpan Senapati"/><br />
+        <sub><b>Arpan Senapati</b></sub>
+      </a>
+    </td>
+          <td align="center">
+      <a href="https://github.com/SulagnaMahato">
+        <img src="https://avatars.githubusercontent.com/u/162031954?v=4" width="100px;" alt="Sulagna Mahato"/><br />
+        <sub><b>Sulagna Mahato</b></sub>
+      </a>
+    </td>
+              <td align="center">
+      <a href="https://github.com/naiyapriya">
+        <img src="https://avatars.githubusercontent.com/u/152768148?v=4" width="100px;" alt="Priya Naiya"/><br />
+        <sub><b>Priya Naiya</b></sub>
       </a>
     </td>
   </tr>
