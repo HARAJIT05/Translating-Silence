@@ -1,0 +1,5 @@
+Flask==2.3.3
+opencv-python==4.9.0.80
+numpy==1.26.4
+mediapipe==0.10.9
+tensorflow==2.15.0

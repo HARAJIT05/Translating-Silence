@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Translating Silence</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <!-- Font Awesome for Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <style>
         /* General Styles */
         body {
@@ -59,23 +59,25 @@
             resize: none;
             background-color: #ffffff;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+            min-height: 80px;
         }
 
         /* Camera Feed */
-        img {
+        #camera-feed {
             width: 80%;
             max-width: 500px;
             height: auto;
             border-radius: 15px;
             margin: 15px 0;
             box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.3);
+            transition: opacity 0.3s ease;
         }
 
         /* Buttons */
         .btn {
             font-size: 18px;
             padding: 10px 20px;
-            margin: 10px;
+            margin: 10px 5px;
             border: none;
             border-radius: 25px;
             background: #2575fc;
@@ -106,7 +108,7 @@
                 font-size: 28px;
             }
 
-            img {
+            #camera-feed {
                 width: 90%;
             }
 
@@ -124,16 +126,12 @@
 </head>
 <body>
     <h1>Translating Silence</h1>
-    
-    <!-- Camera Feed -->
-    <img id="camera-feed" src="{{ url_for('video_feed') }}" alt="Live Feed" />
-    
-    <!-- Result Section -->
+
+    <img id="camera-feed" src="/camera_feed" alt="Live Camera Feed" />
+
     <div id="result">Waiting for gesture...</div>
-    
-    <!-- Word Box -->
     <textarea id="wordBox" readonly placeholder="Word will appear here..."></textarea>
-    
+
     <!-- Buttons Section -->
     <div>
         <button class="btn" onclick="toggleCamera()">
@@ -146,77 +144,104 @@
             <i class="fas fa-trash-alt"></i> Clear
         </button>
     </div>
-    
+
     <script>
-        var socket = io.connect('http://' + document.domain + ':' + location.port);
-    
-        // Initialize variables
-        var currentWord = ''; // Holds the current word
-        var sentence = ''; // Holds the entire sentence
-        var lastUpdatedTime = 0; // Tracks the last time a letter was added
-        var cameraVisible = false; // Camera is off by default
-    
-        // Hide the camera feed initially
-        window.onload = function() {
-            var camera = document.getElementById('camera-feed');
-            camera.style.display = 'none';
-            console.log('Camera is off by default');
-        };
-    
-        // Listen for gesture result from the server
-        socket.on('gesture_result', function(data) {
-            var gesture = data.gesture;
-            var currentTime = new Date().getTime(); // Get the current time in milliseconds
-            document.getElementById('result').innerText = 'Alphabet is: ' + gesture;
-    
-            // Handle gesture recognition
-            if (gesture !== 'RESET' && gesture !== 'Unknown') {
-                if (currentTime - lastUpdatedTime >= 5000 && currentWord !== '') {
-                    sentence += currentWord + ' ';
-                    currentWord = ''; // Reset the current word
-                }
-                currentWord += gesture;
-                lastUpdatedTime = currentTime; // Update the last updated time
-            }
-    
-            if (gesture === 'RESET') {
-                currentWord = '';
-                sentence = '';
-            }
-    
-            document.getElementById('wordBox').value = sentence + currentWord;
-        });
-    
-        // Toggle camera feed visibility
+        let predictedSequence = '';
+        let lastGestureTime = Date.now();
+        let spaceAdded = false;
+        let unknownStartTime = null;
+        let cameraOn = true; // ✅ Initialize camera state ON
+
+        const resultDiv = document.getElementById('result');
+        const wordBox = document.getElementById('wordBox');
+        const cameraFeed = document.getElementById('camera-feed');
+
+        // ✅ Toggle camera visibility
         function toggleCamera() {
-            var camera = document.getElementById('camera-feed');
-            cameraVisible = !cameraVisible;
-            camera.style.display = cameraVisible ? 'block' : 'none';
-            console.log('Camera toggled: ' + (cameraVisible ? 'On' : 'Off'));
-        }
-    
-        // Speak the text
-        function speakText() {
-            var textToSpeak = document.getElementById('wordBox').value;
-            if ('speechSynthesis' in window) {
-                var utterance = new SpeechSynthesisUtterance(textToSpeak);
-                utterance.onstart = function() { console.log("Speaking: " + textToSpeak); };
-                utterance.onerror = function(event) { console.error("Speech synthesis error: ", event); };
-                window.speechSynthesis.speak(utterance);
+            cameraOn = !cameraOn;
+            if (cameraOn) {
+                cameraFeed.style.display = 'block'; // Show feed
             } else {
-                console.error("Speech synthesis is not supported in this browser.");
+                cameraFeed.style.display = 'none'; // Hide feed completely
             }
         }
-    
-        // Clear the word box
-        function clearWordBox() {
-            document.getElementById('wordBox').value = '';
-            document.getElementById('result').innerText = 'Waiting for gesture...';
-            currentWord = '';
-            sentence = '';
-            console.log('Word box cleared.');
+
+        // 🔊 Speak the text in wordBox
+        function speakText() {
+            const textToSpeak = wordBox.value.trim();
+            if (textToSpeak.length === 0) return;
+
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'en-US';
+            utterance.rate = 1;
+            utterance.pitch = 1;
+
+            window.speechSynthesis.speak(utterance);
         }
+
+        // 🧹 Clear word box
+        function clearWordBox() {
+            predictedSequence = '';
+            wordBox.value = '';
+            resultDiv.innerText = 'Waiting for gesture...';
+            lastGestureTime = Date.now();
+            spaceAdded = false;
+            unknownStartTime = null;
+        }
+
+        // 🔁 Poll prediction
+        async function fetchPrediction() {
+            try {
+                const response = await fetch('/predict');
+                const data = await response.json();
+                const currentTime = Date.now();
+                const latestPrediction = data.predicted_char?.trim();
+
+                if (!latestPrediction || latestPrediction === 'NO HAND DETECT') {
+                    resultDiv.innerText = 'Waiting for gesture...';
+
+                    if (currentTime - lastGestureTime > 5000 && !spaceAdded) {
+                        predictedSequence += ' ';
+                        spaceAdded = true;
+                        wordBox.value = predictedSequence;
+                    }
+
+                    unknownStartTime = null;
+                    return;
+                }
+
+                if (latestPrediction.toLowerCase() === 'unknown') {
+                    if (!unknownStartTime) unknownStartTime = currentTime;
+
+                    if (currentTime - unknownStartTime > 5000 && !spaceAdded) {
+                        predictedSequence += ' ';
+                        spaceAdded = true;
+                        wordBox.value = predictedSequence;
+                    }
+
+                    resultDiv.innerText = 'Unknown';
+                    return;
+                } else {
+                    unknownStartTime = null;
+                }
+
+                resultDiv.innerText = `Alphabet: ${latestPrediction}`;
+
+                if (/^[A-Z0-9]$/.test(latestPrediction)) {
+                    predictedSequence += latestPrediction;
+                    wordBox.value = predictedSequence;
+                    lastGestureTime = currentTime;
+                    spaceAdded = false;
+                }
+
+            } catch (err) {
+                console.error('Error fetching prediction:', err);
+                resultDiv.innerText = 'Error fetching prediction';
+            }
+        }
+
+        // Poll every 750ms
+        setInterval(fetchPrediction, 750);
     </script>
-    
 </body>
 </html>
